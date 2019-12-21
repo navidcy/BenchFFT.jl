@@ -9,10 +9,10 @@ nx, ny = 128, 256
 
 gr =  TwoDGrid(nx, Lx, ny, Ly)
 
-fh_test = rand(nx, ny) + im*rand(nx, ny)
+# test function used in bench tests
+f = real(ifft(rand(nx, ny) + im*rand(nx, ny)))
 
-f = real(ifft(fh_test))
-
+# initialize empty arrays
 dfdx = zeros(nx, ny)
 dfdx_c = zeros(Complex{Float64}, (nx, ny))
  fh  = zeros(Complex{Float64}, (gr.nk, gr.nl))
@@ -38,7 +38,7 @@ fftplan = plan_fft(Array{Complex{Float64}, 2}(undef, nx, ny), flags=effort)
 rfftplan = plan_rfft(Array{Float64, 2}(undef, nx, ny), flags=effort)
 
 function dx_using_fftplan(f)
-  mul!(fh, fftplan, Complex.(f))
+  mul!(fh, fftplan, Complex.(f)) #fftplan only works for complex-valued arreys
   @. fh = im*gr.k * fh
   ldiv!(dfdx_c, fftplan, fh)
   return real.(dfdx_c)
@@ -51,25 +51,28 @@ function dx_using_rfftplan(f)
   return dfdx
 end
 
-dxf1 = dx_using_fft(f)
-dxf2 = dx_using_rfft(f)
-dxf3 = dx_using_fftplan(f)
-dxf4 = dx_using_rfftplan(f)
+dfdx1 = dx_using_fft(f)
+dfdx2 = dx_using_rfft(f)
+dfdx3 = dx_using_fftplan(f)
+dfdx4 = dx_using_rfftplan(f)
 
-if  isapprox(dxf1, dxf2, rtol=1e-12) && isapprox(dxf1, dxf3, rtol=1e-12) && isapprox(dxf1, dxf4, rtol=1e-12)
-  println("compute derivatives using fft")
+if  isapprox(dfdx1, dfdx2, rtol=1e-13) && isapprox(dfdx1, dfdx3, rtol=1e-13) && isapprox(dfdx1, dfdx4, rtol=1e-13) #make sure that all function compute  the same ∂f/∂x
+  
+  println("Perform bench tests with nx=", nx, " and ny=", ny, " grid-points")
+  println(" ")
+  println("computing ∂f/∂x using fft")
   @btime dx_using_fft(f);
   println(" ")
-  println("compute derivatives using rfft")
+  println("computing ∂f/∂x using rfft")
   @btime dx_using_rfft(f);
   println(" ")
-  println("compute derivatives using fftplan")
+  println("computing ∂f/∂x using fftplan")
   @btime dx_using_fftplan(f);
   println(" ")
-  println("compute derivatives using rfftplan")
+  println("computing ∂f/∂x using rfftplan")
   @btime dx_using_rfftplan(f);
 else
-  error("something's wrong with computing the derivatives")
+  error("something went wrong with computing the derivatives")
 end
   
   
