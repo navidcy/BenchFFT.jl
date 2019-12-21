@@ -56,7 +56,7 @@ dfdx2 = dx_using_rfft(f)
 dfdx3 = dx_using_fftplan(f)
 dfdx4 = dx_using_rfftplan(f)
 
-if  isapprox(dfdx1, dfdx2, rtol=1e-13) && isapprox(dfdx1, dfdx3, rtol=1e-13) && isapprox(dfdx1, dfdx4, rtol=1e-13) #make sure that all function compute  the same ∂f/∂x
+if  isapprox(dfdx1, dfdx2, rtol=1e-13) && isapprox(dfdx1, dfdx3, rtol=1e-13) && isapprox(dfdx1, dfdx4, rtol=1e-13) #make sure that all functions compute ∂f/∂x the same 
   
   println("Perform bench tests with nx=", nx, " and ny=", ny, " grid-points")
   println(" ")
