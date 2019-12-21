@@ -14,7 +14,7 @@ to run the benchmark.
 
 
 On a 2.9 GHz Intel Core i7 Quad-Core, 16MB RAM MacbookPro one gets:
-```julia
+```
 Performing bench tests for 2D FFTs using nx=256 and ny=256 grid-points with Float64 arithmetic.
 
 computing ∂f/∂x using fft
@@ -36,7 +36,7 @@ computing ∂f/∂x using rfftplan & mul!
   229.309 μs (5 allocations: 224 bytes)
 ```
 and
-```julia
+```
 Performing bench tests for 2D FFTs using nx=256 and ny=256 grid-points with Float32 arithmetic.
 
 computing ∂f/∂x using fft
