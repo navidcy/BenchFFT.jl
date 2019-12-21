@@ -5,12 +5,13 @@ using Random: seed!
 seed!(1234) # for reproducibility
 
 Lx, Ly = 2π, 3π
-nx, ny = 128, 256
+nx, ny = 512, 512
 
 gr =  TwoDGrid(nx, Lx, ny, Ly)
 
 # test function used in bench tests
 f = real(ifft(rand(nx, ny) + im*rand(nx, ny)))
+fcomplex  = Complex.(f)
 
 # initialize empty arrays
 dfdx = zeros(nx, ny)
@@ -34,17 +35,31 @@ end
 
 effort = FFTW.PATIENT
 FFTW.set_num_threads(Sys.CPU_THREADS)
-fftplan = plan_fft(Array{Complex{Float64}, 2}(undef, nx, ny), flags=effort)
+fftplan = plan_fft(Array{Float64, 2}(undef, nx, ny), flags=effort)
 rfftplan = plan_rfft(Array{Float64, 2}(undef, nx, ny), flags=effort)
 
 function dx_using_fftplan(f)
-  mul!(fh, fftplan, Complex.(f)) #fftplan only works for complex-valued arreys
+  fh = fftplan*f
+  @. fh = im*gr.k * fh
+  dfdx = fftplan \ fh
+  return real.(dfdx)
+end
+
+function dx_using_rfftplan(f)
+  fhr = rfftplan*f
+  @. fhr = im*gr.kr * fhr
+  dfdx = rfftplan \ fhr
+  return dfdx
+end
+
+function dx_using_fftplan_mul(f)
+  mul!(fh, fftplan, fcomplex) #fftplan within mul! only works for complex-valued arreys
   @. fh = im*gr.k * fh
   ldiv!(dfdx_c, fftplan, fh)
   return real.(dfdx_c)
 end
 
-function dx_using_rfftplan(f)
+function dx_using_rfftplan_mul(f)
   mul!(fhr, rfftplan, f)
   @. fhr = im*gr.kr * fhr
   ldiv!(dfdx, rfftplan, fhr)
@@ -55,10 +70,12 @@ dfdx1 = dx_using_fft(f)
 dfdx2 = dx_using_rfft(f)
 dfdx3 = dx_using_fftplan(f)
 dfdx4 = dx_using_rfftplan(f)
+dfdx5 = dx_using_fftplan_mul(f)
+dfdx6 = dx_using_rfftplan_mul(f)
 
-if  isapprox(dfdx1, dfdx2, rtol=1e-13) && isapprox(dfdx1, dfdx3, rtol=1e-13) && isapprox(dfdx1, dfdx4, rtol=1e-13) #make sure that all functions compute ∂f/∂x the same 
+if  isapprox(dfdx1, dfdx2, rtol=1e-13) && isapprox(dfdx1, dfdx3, rtol=1e-13) && isapprox(dfdx1, dfdx4, rtol=1e-13) && isapprox(dfdx1, dfdx5, rtol=1e-13) && isapprox(dfdx1, dfdx6, rtol=1e-13) #make sure that all functions compute ∂f/∂x the same 
   
-  println("Perform bench tests with nx=", nx, " and ny=", ny, " grid-points")
+  println("Performing bench tests with nx=", nx, " and ny=", ny, " grid-points")
   println(" ")
   println("computing ∂f/∂x using fft")
   @btime dx_using_fft(f);
@@ -71,6 +88,12 @@ if  isapprox(dfdx1, dfdx2, rtol=1e-13) && isapprox(dfdx1, dfdx3, rtol=1e-13) && 
   println(" ")
   println("computing ∂f/∂x using rfftplan")
   @btime dx_using_rfftplan(f);
+  println(" ")
+  println("computing ∂f/∂x using fftplan + mul!")
+  @btime dx_using_fftplan_mul(f);
+  println(" ")
+  println("computing ∂f/∂x using rfftplan + mul!")
+  @btime dx_using_rfftplan_mul(f);
 else
   error("something went wrong with computing the derivatives")
 end
